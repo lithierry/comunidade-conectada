@@ -1,0 +1,8 @@
+.env
+.test-deps/
+.pytest_cache/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+comunidade.db
+uploads/

@@ -1,0 +1,1 @@
+.form{display:grid;gap:19px;background:#fff;border:1px solid var(--border);border-radius:14px;padding:20px;box-shadow:0 1px 2px #00000005}.two{display:grid;grid-template-columns:1fr;gap:19px}@media(min-width:680px){.form{padding:28px}.two{grid-template-columns:1fr 1fr}}

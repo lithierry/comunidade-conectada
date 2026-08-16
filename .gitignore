@@ -1,0 +1,25 @@
+# Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/coverage/
+frontend/.env*
+!frontend/.env.local.example
+
+# Backend
+backend/.venv/
+backend/.test-deps/
+.pytest_cache/
+**/__pycache__/
+**/*.py[cod]
+backend/.env
+*.db
+*.sqlite
+*.sqlite3
+backend/uploads/
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+.env

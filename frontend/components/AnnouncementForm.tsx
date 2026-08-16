@@ -1,0 +1,16 @@
+"use client";
+import React from "react";
+import { useState } from "react";
+import { categories, type Announcement } from "@/lib/types";
+import styles from "./AnnouncementForm.module.css";
+const categoryOptionLabels: Record<(typeof categories)[number]["value"], string> = {
+ donation: "Doação",
+ event: "Evento",
+ opportunity: "Oportunidade",
+ service: "Serviço",
+};
+export function AnnouncementForm({ initial, submitLabel, onSubmit, submitting = false }: { initial?: Announcement; submitLabel: string; submitting?: boolean; onSubmit: (form: FormData) => Promise<void> }) {
+ const [error,setError]=useState(""); const [fileName,setFileName]=useState("");
+ async function submit(event:React.FormEvent<HTMLFormElement>){event.preventDefault();setError("");const form=new FormData(event.currentTarget);const title=String(form.get("title")||"").trim(),description=String(form.get("description")||"").trim(),neighborhood=String(form.get("neighborhood")||"").trim();if(!title||!description||!neighborhood){setError("Preencha os campos obrigatórios.");return;}const phone=String(form.get("contact_phone")||"").trim();if(phone && phone.replace(/\D/g,"").length<10){setError("Informe um WhatsApp válido ou deixe o campo vazio.");return;}try{await onSubmit(form);}catch(e){setError(e instanceof Error?e.message:"Não foi possível salvar o anúncio.");}}
+ return <form className={styles.form} onSubmit={submit} noValidate><div className="form-field"><label htmlFor="title">Título *</label><input id="title" name="title" maxLength={120} required defaultValue={initial?.title}/></div><div className={styles.two}><div className="form-field"><label htmlFor="category">Categoria *</label><select id="category" name="category" defaultValue={initial?.category ?? "donation"}>{categories.map((category)=><option value={category.value} key={category.value}>{categoryOptionLabels[category.value]}</option>)}</select></div><div className="form-field"><label htmlFor="neighborhood">Bairro *</label><input id="neighborhood" name="neighborhood" maxLength={100} required defaultValue={initial?.neighborhood}/></div></div><div className="form-field"><label htmlFor="description">Descrição *</label><textarea id="description" name="description" maxLength={3000} required defaultValue={initial?.description}/></div><div className={styles.two}><div className="form-field"><label htmlFor="contact_name">Nome para contato</label><input id="contact_name" name="contact_name" maxLength={100} defaultValue={initial?.contact_name ?? ""}/></div><div className="form-field"><label htmlFor="contact_phone">WhatsApp</label><input id="contact_phone" name="contact_phone" inputMode="tel" maxLength={20} defaultValue={initial?.contact_phone ?? ""}/></div></div><div className="form-field"><label htmlFor="image">Imagem opcional</label><input id="image" name="image" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event)=>setFileName(event.target.files?.[0]?.name ?? "")}/><small>{fileName ? `Arquivo selecionado: ${fileName}` : "Envie uma imagem JPG, PNG ou WEBP."}</small></div>{error&&<p className="error-text" role="alert">{error}</p>}<button className="button primary" disabled={submitting}>{submitting?"Salvando…":submitLabel}</button></form>;
+}
