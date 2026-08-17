@@ -1,13 +1,16 @@
 from contextlib import asynccontextmanager
 import mimetypes
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.core.config import get_settings
+from app.core.validation import validation_error_message
 from app.database import Base, engine
-from app.routes import admin, announcements
+from app.routes import account, admin, announcements
 
 
 @asynccontextmanager
@@ -28,12 +31,21 @@ app.add_middleware(
     allow_origins=settings.origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
-    allow_headers=["Content-Type"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 app.mount("/uploads", StaticFiles(directory=settings.upload_dir), name="uploads")
+app.include_router(account.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 app.include_router(announcements.router, prefix="/api")
 app.include_router(announcements.admin_router, prefix="/api")
+
+
+@app.exception_handler(RequestValidationError)
+async def request_validation_error(_: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={"detail": validation_error_message(exc.errors())},
+    )
 
 
 @app.get("/api/health")

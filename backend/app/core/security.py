@@ -1,4 +1,5 @@
 from collections import defaultdict, deque
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from threading import Lock
 from time import monotonic
@@ -6,6 +7,7 @@ from time import monotonic
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError
 from fastapi import HTTPException, Request, status
+import httpx
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from jwt import InvalidTokenError, decode as decode_jwt
 
@@ -16,6 +18,13 @@ _attempts: dict[str, deque[float]] = defaultdict(deque)
 _attempts_lock = Lock()
 LOGIN_WINDOW_SECONDS = 15 * 60
 LOGIN_MAX_ATTEMPTS = 5
+
+
+@dataclass(frozen=True)
+class AuthenticatedUser:
+    id: str
+    email: str | None
+    token: str
 
 
 def password_hasher() -> PasswordHasher:
@@ -43,16 +52,56 @@ def create_session() -> str:
     return _serializer().dumps({"role": "admin", "issued_at": datetime.now(timezone.utc).isoformat()})
 
 
-def require_admin(request: Request) -> None:
+def _bearer_token(request: Request) -> str | None:
     bearer = request.headers.get("authorization", "")
+    return bearer[7:].strip() if bearer.lower().startswith("bearer ") else None
+
+
+def authenticate_user(request: Request) -> AuthenticatedUser | None:
+    token = _bearer_token(request)
+    if not token:
+        return None
     jwt_secret = get_settings().supabase_jwt_secret
-    if bearer.lower().startswith("bearer ") and jwt_secret:
+    settings = get_settings()
+    if jwt_secret:
         try:
-            payload = decode_jwt(bearer[7:].strip(), jwt_secret, algorithms=["HS256"], audience="authenticated")
-            if payload.get("role") == "authenticated":
-                return
+            payload = decode_jwt(token, jwt_secret, algorithms=["HS256"], audience="authenticated")
+            email = str(payload.get("email", "")).lower()
+            user_id = str(payload.get("sub", ""))
+            if payload.get("role") == "authenticated" and user_id:
+                return AuthenticatedUser(id=user_id, email=email or None, token=token)
         except InvalidTokenError:
             pass
+    if settings.supabase_url and settings.supabase_publishable_key:
+        try:
+            response = httpx.get(
+                f"{settings.supabase_url.rstrip('/')}/auth/v1/user",
+                headers={"apikey": settings.supabase_publishable_key, "Authorization": f"Bearer {token}"},
+                timeout=5,
+            )
+            if response.is_success:
+                data = response.json()
+                user_id = str(data.get("id", ""))
+                if user_id:
+                    return AuthenticatedUser(id=user_id, email=str(data.get("email", "")).lower() or None, token=token)
+        except (httpx.HTTPError, ValueError):
+            pass
+
+    return None
+
+
+def require_user(request: Request) -> AuthenticatedUser:
+    user = authenticate_user(request)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Entre para continuar.")
+    return user
+
+
+def require_admin(request: Request) -> None:
+    user = authenticate_user(request)
+    settings = get_settings()
+    if user and user.email and user.email in settings.admin_emails:
+        return
     token = request.cookies.get("cc_admin")
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Autenticação administrativa necessária.")

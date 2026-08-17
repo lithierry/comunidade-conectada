@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from sqlalchemy import Select, func, select
 from sqlalchemy.orm import Session
 
@@ -30,6 +32,10 @@ class AnnouncementRepository:
 
     def get(self, db: Session, announcement_id: int) -> Announcement | None:
         return db.get(Announcement, announcement_id)
+
+    def list_owned(self, db: Session, owner_id: str) -> list[Announcement]:
+        query = select(Announcement).where(Announcement.owner_id == owner_id).order_by(Announcement.created_at.desc(), Announcement.id.desc())
+        return list(db.scalars(query).all())
 
     def create(self, db: Session, announcement: Announcement) -> Announcement:
         db.add(announcement)

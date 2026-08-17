@@ -1,7 +1,7 @@
 import enum
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, Integer, String, Text, func
+from sqlalchemy import DateTime, Enum, Integer, String, Text, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -29,12 +29,14 @@ class Announcement(Base):
     description: Mapped[str] = mapped_column(Text, nullable=False)
     category: Mapped[AnnouncementCategory] = mapped_column(Enum(AnnouncementCategory), nullable=False, index=True)
     neighborhood: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    owner_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), nullable=False, index=True)
     contact_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     contact_phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
     image_url: Mapped[str | None] = mapped_column(String(255), nullable=True)
     status: Mapped[AnnouncementStatus] = mapped_column(
-        Enum(AnnouncementStatus), nullable=False, default=AnnouncementStatus.pending, index=True
+        Enum(AnnouncementStatus), nullable=False, default=AnnouncementStatus.published, index=True
     )
+    consent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False

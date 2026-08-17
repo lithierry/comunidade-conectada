@@ -30,20 +30,20 @@ class AnnouncementService:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Publicação não encontrada.")
         return item
 
-    def create_pending(
+    def create_published(
         self, db: Session, *, title: str, description: str, category: AnnouncementCategory, neighborhood: str,
-        contact_name: str | None, contact_phone: str | None, image: UploadFile | None,
+        contact_name: str | None, contact_phone: str | None, image: UploadFile | None, owner_id: str, auth_token: str | None = None,
     ) -> Announcement:
-        image_url = self.storage.save(image)
+        image_url = self.storage.save(image, auth_token, owner_id)
         announcement = Announcement(
             title=title.strip(), description=description.strip(), category=category, neighborhood=neighborhood.strip(),
-            contact_name=contact_name, contact_phone=contact_phone, image_url=image_url,
-            status=AnnouncementStatus.pending,
+            owner_id=owner_id, contact_name=contact_name, contact_phone=contact_phone, image_url=image_url,
+            status=AnnouncementStatus.published,
         )
         try:
             return self.repository.create(db, announcement)
         except Exception:
-            self.storage.delete(image_url)
+            self.storage.delete(image_url, auth_token)
             raise
 
     def update(
@@ -54,40 +54,50 @@ class AnnouncementService:
         *,
         image: UploadFile | None = None,
         remove_image: bool = False,
+        owner_id: str | None = None,
+        auth_token: str | None = None,
     ) -> Announcement:
         item = self.get_admin(db, announcement_id)
+        if owner_id and item.owner_id != owner_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Você só pode editar seus próprios anúncios.")
+        if owner_id and item.status == AnnouncementStatus.closed:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Esta publicação foi encerrada pela equipe e não pode ser reativada por edição.",
+            )
         old_image_url = item.image_url
-        new_image_url = self.storage.save(image) if image else None
+        new_image_url = self.storage.save(image, auth_token, owner_id or item.owner_id) if image else None
         for field, value in payload.model_dump(exclude_unset=True).items():
             setattr(item, field, value)
         if new_image_url:
             item.image_url = new_image_url
         elif remove_image:
             item.image_url = None
+        if owner_id and item.status in {AnnouncementStatus.pending, AnnouncementStatus.rejected}:
+            item.status = AnnouncementStatus.published
         try:
             saved = self.repository.save(db, item)
         except Exception:
-            self.storage.delete(new_image_url)
+            self.storage.delete(new_image_url, auth_token)
             raise
         if old_image_url and (new_image_url or remove_image):
-            self.storage.delete(old_image_url)
+            self.storage.delete(old_image_url, auth_token)
         return saved
 
     def transition(self, db: Session, announcement_id: int, new_status: AnnouncementStatus) -> Announcement:
         item = self.get_admin(db, announcement_id)
-        allowed = {
-            AnnouncementStatus.pending: {AnnouncementStatus.published, AnnouncementStatus.rejected},
-            AnnouncementStatus.published: {AnnouncementStatus.closed},
-            AnnouncementStatus.closed: set(),
-            AnnouncementStatus.rejected: set(),
-        }
-        if new_status not in allowed[item.status]:
+        if item.status != AnnouncementStatus.published or new_status != AnnouncementStatus.closed:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Essa transição de status não é permitida.")
         item.status = new_status
         return self.repository.save(db, item)
 
-    def delete(self, db: Session, announcement_id: int) -> None:
+    def delete(self, db: Session, announcement_id: int, *, owner_id: str | None = None, auth_token: str | None = None) -> None:
         item = self.get_admin(db, announcement_id)
+        if owner_id and item.owner_id != owner_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Você só pode excluir seus próprios anúncios.")
         image_url = item.image_url
         self.repository.delete(db, item)
-        self.storage.delete(image_url)
+        self.storage.delete(image_url, auth_token)
+
+    def list_owner(self, db: Session, owner_id: str) -> list[Announcement]:
+        return self.repository.list_owned(db, owner_id)

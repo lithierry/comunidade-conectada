@@ -2,6 +2,7 @@ from io import BytesIO
 from pathlib import Path
 from uuid import uuid4
 
+import httpx
 from fastapi import HTTPException, UploadFile, status
 from PIL import Image, UnidentifiedImageError
 
@@ -11,7 +12,7 @@ ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
 
 class ImageStorage:
-    def save(self, file: UploadFile | None) -> str | None:
+    def save(self, file: UploadFile | None, auth_token: str | None = None, owner_id: str | None = None) -> str | None:
         if file is None or not file.filename:
             return None
         if file.content_type not in ALLOWED_CONTENT_TYPES:
@@ -37,12 +38,53 @@ class ImageStorage:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="O arquivo de imagem é inválido.") from exc
 
         upload_dir = Path(get_settings().upload_dir)
-        upload_dir.mkdir(parents=True, exist_ok=True)
-        filename = f"{uuid4().hex}.webp"
-        (upload_dir / filename).write_bytes(output.getvalue())
+        filename = f"{owner_id or 'admin'}/{uuid4().hex}.webp"
+        settings = get_settings()
+        if settings.supabase_url and settings.supabase_publishable_key:
+            credential = auth_token or settings.supabase_secret_key or settings.supabase_publishable_key
+            api_key = settings.supabase_publishable_key if auth_token else settings.supabase_secret_key or settings.supabase_publishable_key
+            try:
+                response = httpx.post(
+                    f"{settings.supabase_url.rstrip('/')}/storage/v1/object/{settings.supabase_storage_bucket}/{filename}",
+                    content=output.getvalue(),
+                    headers={
+                        "apikey": api_key,
+                        "Authorization": f"Bearer {credential}",
+                        "Content-Type": "image/webp",
+                        "x-upsert": "false",
+                    },
+                    timeout=15,
+                )
+            except httpx.HTTPError as exc:
+                raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="O armazenamento de imagens está indisponível.") from exc
+            if response.is_error:
+                raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Não foi possível salvar a imagem no Supabase.")
+            return f"{settings.supabase_url.rstrip('/')}/storage/v1/object/public/{settings.supabase_storage_bucket}/{filename}"
+
+        local_path = upload_dir / filename
+        local_path.parent.mkdir(parents=True, exist_ok=True)
+        local_path.write_bytes(output.getvalue())
         return f"/uploads/{filename}"
 
-    def delete(self, image_url: str | None) -> None:
+    def delete(self, image_url: str | None, auth_token: str | None = None) -> None:
+        settings = get_settings()
+        if image_url and settings.supabase_url and settings.supabase_publishable_key and "/storage/v1/object/public/" in image_url:
+            prefix = f"{settings.supabase_url.rstrip('/')}/storage/v1/object/public/{settings.supabase_storage_bucket}/"
+            if image_url.startswith(prefix):
+                path = image_url[len(prefix):]
+                credential = auth_token or settings.supabase_secret_key or settings.supabase_publishable_key
+                api_key = settings.supabase_publishable_key if auth_token else settings.supabase_secret_key or settings.supabase_publishable_key
+                try:
+                    httpx.delete(
+                        f"{settings.supabase_url.rstrip('/')}/storage/v1/object/{settings.supabase_storage_bucket}/{path}",
+                        headers={"apikey": api_key, "Authorization": f"Bearer {credential}"},
+                        timeout=15,
+                    )
+                except httpx.HTTPError:
+                    pass
+                return
         if image_url and image_url.startswith("/uploads/"):
-            path = Path(get_settings().upload_dir) / Path(image_url).name
-            path.unlink(missing_ok=True)
+            upload_dir = Path(settings.upload_dir).resolve()
+            path = (upload_dir / image_url.removeprefix("/uploads/")).resolve()
+            if upload_dir in path.parents:
+                path.unlink(missing_ok=True)
