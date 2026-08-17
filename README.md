@@ -73,4 +73,4 @@ Configure `BACKEND_URL`, `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBL
 
 O `vercel.json` publica o repositório como um projeto de Services: Next.js em `frontend` e FastAPI em `backend`, ambos no mesmo domínio. As rotas `/api/*` são encaminhadas ao backend e as demais ao frontend.
 
-Na Vercel, use a raiz do repositório e o preset Services. Configure as variáveis públicas do Supabase e as variáveis do `backend/.env.example`; use `UPLOAD_DIR=/tmp/uploads`, `COOKIE_SECURE=true` e inclua o domínio público em `ALLOWED_ORIGINS`.
+Na Vercel, use a raiz do repositório e o preset Services. Configure as variáveis públicas do Supabase e as variáveis do `backend/.env.example`; em `SUPABASE_DATABASE_URL`, use o Transaction pooler do Supabase na porta 6543. Use também `UPLOAD_DIR=/tmp/uploads`, `COOKIE_SECURE=true` e inclua o domínio público em `ALLOWED_ORIGINS`.
