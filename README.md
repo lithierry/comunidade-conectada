@@ -68,3 +68,12 @@ pnpm dev
 ```
 
 Configure `BACKEND_URL`, `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. A aplicação fica disponível em `http://localhost:3000`.
+
+## Deploy na Vercel
+
+O repositório é publicado como dois projetos ligados ao mesmo GitHub:
+
+- frontend: diretório raiz `frontend`, preset Next.js e domínio público da aplicação;
+- backend: diretório raiz `backend`, com a função FastAPI em `api/index.py`.
+
+No frontend, configure `BACKEND_URL` com a URL HTTPS do projeto backend e informe as duas variáveis públicas do Supabase. No backend, configure as variáveis descritas em `backend/.env.example`, use `UPLOAD_DIR=/tmp/uploads`, `COOKIE_SECURE=true` e inclua o domínio do frontend em `ALLOWED_ORIGINS`.
