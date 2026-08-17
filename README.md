@@ -71,9 +71,6 @@ Configure `BACKEND_URL`, `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBL
 
 ## Deploy na Vercel
 
-O repositório é publicado como dois projetos ligados ao mesmo GitHub:
+O `vercel.json` publica o repositório como um projeto de Services: Next.js em `frontend` e FastAPI em `backend`, ambos no mesmo domínio. As rotas `/api/*` são encaminhadas ao backend e as demais ao frontend.
 
-- frontend: diretório raiz `frontend`, preset Next.js e domínio público da aplicação;
-- backend: diretório raiz `backend`, com a função FastAPI em `api/index.py`.
-
-No frontend, configure `BACKEND_URL` com a URL HTTPS do projeto backend e informe as duas variáveis públicas do Supabase. No backend, configure as variáveis descritas em `backend/.env.example`, use `UPLOAD_DIR=/tmp/uploads`, `COOKIE_SECURE=true` e inclua o domínio do frontend em `ALLOWED_ORIGINS`.
+Na Vercel, use a raiz do repositório e o preset Services. Configure as variáveis públicas do Supabase e as variáveis do `backend/.env.example`; use `UPLOAD_DIR=/tmp/uploads`, `COOKIE_SECURE=true` e inclua o domínio público em `ALLOWED_ORIGINS`.
