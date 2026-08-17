@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
+import { AppAlert } from "@/components/AppAlert";
 import { authErrorMessage, userDisplayName } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import styles from "./Header.module.css";
@@ -72,7 +73,7 @@ export function Header() {
         {accountOpen && <div className={styles.accountOptions} id="account-options">
           <Link href="/minhas" onClick={closeMenus}>Minhas publicações</Link>
           <button type="button" disabled={signingOut} onClick={signOut}>{signingOut ? "Saindo…" : "Sair"}</button>
-          {logoutError && <span className={styles.logoutError} role="alert">{logoutError}</span>}
+          {logoutError && <AppAlert kind="error" title="Não foi possível sair" message={logoutError} onClose={() => setLogoutError("")} />}
         </div>}
       </div> : <Link href="/login" onClick={closeMenus}>Entrar</Link>}
       <Link className={styles.publish} href="/publicar" onClick={closeMenus}>Publicar anúncio</Link>

@@ -14,12 +14,13 @@ Mural digital para moradores divulgarem doações, eventos, oportunidades e serv
 ### Conta do morador
 
 - cadastro com nome, e-mail, senha, CPF e telefone;
-- confirmação de e-mail, login, logout e recuperação de senha;
-- CPF e telefone vinculados de forma única à conta, sem exposição nos anúncios;
+- ativação e login automáticos após o cadastro, sem etapa de confirmação de e-mail;
+- login, logout e recuperação de senha;
+- CPF e telefone vinculados de forma única à conta, com aviso específico em caso de duplicidade e sem exposição nos anúncios;
 - criação de publicação somente por usuário autenticado com cadastro completo;
 - publicação imediata, sem fila de aprovação prévia;
 - página para consultar, editar e excluir as próprias publicações;
-- imagem opcional com prévia quadrada e formulário adaptado para celular.
+- imagem opcional com prévia quadrada, alertas destacados e formulário adaptado para celular.
 
 ### Administração
 
@@ -29,7 +30,7 @@ Mural digital para moradores divulgarem doações, eventos, oportunidades e serv
 
 ## Privacidade e segurança
 
-- autenticação e confirmação de e-mail pelo Supabase Auth;
+- autenticação pelo Supabase Auth;
 - propriedade de publicações validada no backend e por políticas RLS;
 - CPF e telefone normalizados e armazenados somente como identificadores HMAC e quatro últimos dígitos;
 - imagens validadas, convertidas para WebP e salvas sem os metadados originais;

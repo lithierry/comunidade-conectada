@@ -13,7 +13,9 @@ from app.repositories.account_profiles import AccountProfileRepository
 from app.schemas.account import AccountOut, ProfileCompletionInput, RegistrationInput, RegistrationOut
 
 
-IDENTITY_CONFLICT_MESSAGE = "Não foi possível vincular esses dados. Já pode existir uma conta com o e-mail, CPF ou telefone informado."
+CPF_CONFLICT_MESSAGE = "Este CPF já está vinculado a outra conta."
+PHONE_CONFLICT_MESSAGE = "Este telefone já está vinculado a outra conta."
+EMAIL_CONFLICT_MESSAGE = "Este e-mail já está vinculado a outra conta."
 
 
 class SupabaseRegistrationError(Exception):
@@ -25,7 +27,6 @@ class SupabaseRegistrationError(Exception):
 @dataclass(frozen=True)
 class SupabaseSignupResult:
     user_id: str
-    requires_email_confirmation: bool
 
 
 class SupabaseAuthGateway:
@@ -86,10 +87,7 @@ class SupabaseAuthGateway:
         user_id = user.get("id")
         if not isinstance(user_id, str) or not user_id:
             raise SupabaseRegistrationError("Resposta inválida do serviço de autenticação.", 502)
-        return SupabaseSignupResult(
-            user_id=user_id,
-            requires_email_confirmation=not bool(data.get("session")) if isinstance(data, dict) else True,
-        )
+        return SupabaseSignupResult(user_id=user_id)
 
     def delete_user(self, user_id: str) -> None:
         settings = self._settings()
@@ -148,10 +146,28 @@ class RegistrationService:
             privacy_acknowledged_at=datetime.now(timezone.utc),
         )
 
+    @staticmethod
+    def _conflict_message(conflict: str | None) -> str:
+        if conflict == "cpf":
+            return CPF_CONFLICT_MESSAGE
+        if conflict == "phone":
+            return PHONE_CONFLICT_MESSAGE
+        return "Não foi possível vincular os dados desta conta."
+
+    @classmethod
+    def _integrity_conflict_message(cls, exc: IntegrityError) -> str:
+        detail = str(exc.orig).lower()
+        if "cpf_fingerprint" in detail:
+            return CPF_CONFLICT_MESSAGE
+        if "phone_fingerprint" in detail:
+            return PHONE_CONFLICT_MESSAGE
+        return cls._conflict_message(None)
+
     def register(self, db: Session, payload: RegistrationInput, redirect_to: str) -> RegistrationOut:
         cpf_fingerprint, phone_fingerprint = self._fingerprints(payload.cpf, payload.phone)
-        if self.repository.has_identity_conflict(db, cpf_fingerprint, phone_fingerprint):
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=IDENTITY_CONFLICT_MESSAGE)
+        conflict = self.repository.identity_conflict(db, cpf_fingerprint, phone_fingerprint)
+        if conflict:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=self._conflict_message(conflict))
         try:
             signup = self.auth.sign_up(
                 email=payload.email,
@@ -162,7 +178,7 @@ class RegistrationService:
         except SupabaseRegistrationError as exc:
             message = str(exc)
             if "already" in message.lower() or exc.status_code == 409:
-                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=IDENTITY_CONFLICT_MESSAGE) from exc
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=EMAIL_CONFLICT_MESSAGE) from exc
             if "rate" in message.lower() or exc.status_code == 429:
                 raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Muitas tentativas. Aguarde e tente novamente.") from exc
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Não foi possível criar a conta com os dados informados.") from exc
@@ -178,28 +194,22 @@ class RegistrationService:
         except IntegrityError as exc:
             db.rollback()
             self.auth.delete_user(signup.user_id)
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=IDENTITY_CONFLICT_MESSAGE) from exc
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=self._integrity_conflict_message(exc)) from exc
         except Exception:
             db.rollback()
             self.auth.delete_user(signup.user_id)
             raise
 
-        return RegistrationOut(
-            requires_email_confirmation=signup.requires_email_confirmation,
-            message=(
-                "Conta criada. Enviamos um link de confirmação para o seu e-mail."
-                if signup.requires_email_confirmation
-                else "Conta criada. Você já pode entrar."
-            ),
-        )
+        return RegistrationOut(message="Conta criada.")
 
     def complete(self, db: Session, user_id: str, payload: ProfileCompletionInput) -> AccountOut:
         existing = self.repository.get(db, user_id)
         if existing:
             return self.account(existing, None)
         cpf_fingerprint, phone_fingerprint = self._fingerprints(payload.cpf, payload.phone)
-        if self.repository.has_identity_conflict(db, cpf_fingerprint, phone_fingerprint):
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=IDENTITY_CONFLICT_MESSAGE)
+        conflict = self.repository.identity_conflict(db, cpf_fingerprint, phone_fingerprint)
+        if conflict:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=self._conflict_message(conflict))
         self.auth.update_name(user_id, payload.full_name)
         try:
             profile = self.repository.create(
@@ -213,7 +223,7 @@ class RegistrationService:
             )
         except IntegrityError as exc:
             db.rollback()
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=IDENTITY_CONFLICT_MESSAGE) from exc
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=self._integrity_conflict_message(exc)) from exc
         return self.account(profile, None)
 
     @staticmethod

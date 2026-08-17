@@ -10,7 +10,7 @@ from app.database import SessionLocal
 from app.models.account_profile import AccountProfile
 from app.schemas.account import ProfileCompletionInput, RegistrationInput
 from app.services.registration import (
-    IDENTITY_CONFLICT_MESSAGE,
+    CPF_CONFLICT_MESSAGE,
     RegistrationService,
     SupabaseSignupResult,
 )
@@ -21,19 +21,15 @@ TEST_SECRET = "supabase-test-jwt-secret-with-32-plus-bytes"
 
 
 class FakeAuthGateway:
-    def __init__(self, user_id=TEST_USER_ID, requires_email_confirmation=False):
+    def __init__(self, user_id=TEST_USER_ID):
         self.user_id = user_id
-        self.requires_email_confirmation = requires_email_confirmation
         self.sign_up_calls = []
         self.deleted_users = []
         self.updated_names = []
 
     def sign_up(self, **kwargs):
         self.sign_up_calls.append(kwargs)
-        return SupabaseSignupResult(
-            user_id=self.user_id,
-            requires_email_confirmation=self.requires_email_confirmation,
-        )
+        return SupabaseSignupResult(user_id=self.user_id)
 
     def delete_user(self, user_id):
         self.deleted_users.append(user_id)
@@ -65,15 +61,14 @@ def profile_headers(user_id=TEST_USER_ID, email="pessoa@example.com"):
 
 
 def test_registration_service_creates_profile_without_raw_pii():
-    gateway = FakeAuthGateway(requires_email_confirmation=True)
+    gateway = FakeAuthGateway()
     service = RegistrationService(auth=gateway)
 
     with SessionLocal() as db:
         result = service.register(db, registration_payload(), "http://localhost:3000/login")
         profile = db.get(AccountProfile, TEST_USER_ID)
 
-    assert result.requires_email_confirmation is True
-    assert "link de confirmação" in result.message
+    assert result.message == "Conta criada."
     assert gateway.sign_up_calls[0]["full_name"] == "Pessoa cadastrada"
     assert profile is not None
     assert profile.cpf_last4 == "4725"
@@ -86,7 +81,7 @@ def test_registration_service_creates_profile_without_raw_pii():
     assert not hasattr(profile, "phone")
 
 
-def test_registration_identity_conflict_is_generic_and_does_not_call_gateway_twice():
+def test_registration_rejects_duplicate_cpf_and_does_not_call_gateway_twice():
     gateway = FakeAuthGateway()
     service = RegistrationService(auth=gateway)
 
@@ -100,7 +95,7 @@ def test_registration_identity_conflict_is_generic_and_does_not_call_gateway_twi
             )
 
     assert caught.value.status_code == 409
-    assert caught.value.detail == IDENTITY_CONFLICT_MESSAGE
+    assert caught.value.detail == CPF_CONFLICT_MESSAGE
     assert "52998224725" not in caught.value.detail
     assert "98765" not in caught.value.detail
     assert len(gateway.sign_up_calls) == 1

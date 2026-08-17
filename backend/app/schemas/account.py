@@ -61,7 +61,6 @@ class ProfileCompletionInput(BaseModel):
 
 
 class RegistrationOut(BaseModel):
-    requires_email_confirmation: bool
     message: str
 
 

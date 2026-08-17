@@ -4,6 +4,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { AppAlert } from "@/components/AppAlert";
 import { categories, type Announcement } from "@/lib/types";
 import styles from "./AnnouncementForm.module.css";
 
@@ -22,10 +23,6 @@ export function AnnouncementForm({ initial, submitLabel, onSubmit, submitting = 
     setErrorField(field);
     setError(message);
     if (field) document.getElementById(field)?.focus();
-  }
-
-  function describedBy(field: string, helpId: string) {
-    return errorField === field ? `${helpId} form-error` : helpId;
   }
 
   function chooseImage(event: React.ChangeEvent<HTMLInputElement>) {
@@ -72,8 +69,7 @@ export function AnnouncementForm({ initial, submitLabel, onSubmit, submitting = 
   return <form className={styles.form} onSubmit={submit} noValidate>
     <div className="form-field">
       <label htmlFor="title">Título *</label>
-      <input id="title" name="title" minLength={3} maxLength={120} required defaultValue={initial?.title} aria-invalid={errorField === "title"} aria-describedby={describedBy("title", "title-help")} />
-      <small id="title-help">Resuma em poucas palavras o que será oferecido ou divulgado. Use pelo menos 3 caracteres.</small>
+      <input id="title" name="title" minLength={3} maxLength={120} required defaultValue={initial?.title} aria-invalid={errorField === "title"} />
     </div>
     <div className={styles.two}>
       <div className="form-field">
@@ -82,39 +78,35 @@ export function AnnouncementForm({ initial, submitLabel, onSubmit, submitting = 
       </div>
       <div className="form-field">
         <label htmlFor="neighborhood">Bairro *</label>
-        <input id="neighborhood" name="neighborhood" minLength={2} maxLength={100} required defaultValue={initial?.neighborhood} aria-invalid={errorField === "neighborhood"} aria-describedby={describedBy("neighborhood", "neighborhood-help")} />
-        <small id="neighborhood-help">Informe onde acontece o evento, atendimento ou retirada.</small>
+        <input id="neighborhood" name="neighborhood" minLength={2} maxLength={100} required defaultValue={initial?.neighborhood} aria-invalid={errorField === "neighborhood"} />
       </div>
     </div>
     <div className="form-field">
       <label htmlFor="description">Descrição *</label>
-      <textarea id="description" name="description" minLength={10} maxLength={3000} required defaultValue={initial?.description} aria-invalid={errorField === "description"} aria-describedby={describedBy("description", "description-help")} />
-      <small id="description-help">Inclua as informações necessárias para a comunidade entender a publicação. Use pelo menos 10 caracteres.</small>
+      <textarea id="description" name="description" minLength={10} maxLength={3000} required defaultValue={initial?.description} aria-invalid={errorField === "description"} />
     </div>
     <div className={styles.two}>
       <div className="form-field">
         <label htmlFor="contact_name">Nome para contato (opcional)</label>
-        <input id="contact_name" name="contact_name" minLength={2} maxLength={100} autoComplete="name" defaultValue={initial?.contact_name ?? ""} aria-invalid={errorField === "contact_name"} aria-describedby={describedBy("contact_name", "contact-name-help")} />
-        <small id="contact-name-help">Se preenchido, este nome ficará público assim que a publicação for enviada.</small>
+        <input id="contact_name" name="contact_name" minLength={2} maxLength={100} autoComplete="name" defaultValue={initial?.contact_name ?? ""} aria-invalid={errorField === "contact_name"} />
       </div>
       <div className="form-field">
         <label htmlFor="contact_phone">WhatsApp (opcional)</label>
-        <input id="contact_phone" name="contact_phone" inputMode="tel" autoComplete="tel" maxLength={20} defaultValue={initial?.contact_phone ?? ""} aria-invalid={errorField === "contact_phone"} aria-describedby={describedBy("contact_phone", "contact-phone-help")} />
-        <small id="contact-phone-help">Informe DDD e número. O contato ficará público assim que a publicação for enviada.</small>
+        <input id="contact_phone" name="contact_phone" inputMode="tel" autoComplete="tel" maxLength={20} defaultValue={initial?.contact_phone ?? ""} aria-invalid={errorField === "contact_phone"} />
       </div>
     </div>
     <div className="form-field">
       <span className={styles.imageLabel}>Imagem (opcional)</span>
       <div className={styles.imagePicker}>
-        <label className={styles.preview} htmlFor="image">{preview ? <img src={preview} alt="Prévia da imagem do anúncio" /> : <span><strong>Adicionar imagem</strong><small>JPG, PNG ou WEBP até 5 MB</small></span>}</label>
-        <input className={styles.fileInput} id="image" name="image" type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseImage} aria-invalid={errorField === "image"} aria-describedby={describedBy("image", "image-help")} />
+        <label className={styles.preview} htmlFor="image">{preview ? <img src={preview} alt="Prévia da imagem do anúncio" /> : <span><strong>Adicionar imagem</strong><small>JPG, PNG ou WEBP · 5 MB</small></span>}</label>
+        <input className={styles.fileInput} id="image" name="image" type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseImage} aria-invalid={errorField === "image"} aria-describedby="image-help" />
         <div className={styles.imageActions}><label className="button secondary" htmlFor="image">{preview ? "Trocar imagem" : "Escolher imagem"}</label>{(fileName || (initial?.image_url && preview)) && <button type="button" className="button secondary" onClick={clearSelectedImage}>Remover seleção</button>}</div>
-        <small id="image-help" className={styles.fileName}>{fileName || (initial?.image_url ? "Imagem atual. Você pode trocar ou remover antes de salvar." : "Nenhuma imagem selecionada. A publicação pode ser enviada sem imagem.")}</small>
+        <small id="image-help" className={styles.fileName}>{fileName || (initial?.image_url ? "Imagem atual" : "Imagem opcional")}</small>
       </div>
       {initial?.image_url && <label className={styles.removeImage}><input type="checkbox" name="remove_image" /> Remover imagem atual ao salvar</label>}
     </div>
-    {!initial && <label className="legal-check"><input id="publication_consent" type="checkbox" name="publication_consent" value="true" required aria-invalid={errorField === "publication_consent"} aria-describedby={errorField === "publication_consent" ? "form-error" : undefined} /><span>Autorizo a exibição pública dos dados de contato informados e confirmo que posso publicar a imagem enviada. Consulte o aviso de <Link href="/privacidade" target="_blank">privacidade e uso de dados</Link>.</span></label>}
-    {error && <p id="form-error" className="error-text" role="alert">{error}</p>}
+    {!initial && <label className="legal-check"><input id="publication_consent" type="checkbox" name="publication_consent" value="true" required aria-invalid={errorField === "publication_consent"} /><span>Autorizo a publicação dos dados informados e aceito o aviso de <Link href="/privacidade" target="_blank">privacidade</Link>.</span></label>}
+    {error && <AppAlert kind="error" title="Revise a publicação" message={error} onClose={() => setError("")} />}
     <button className="button primary" disabled={submitting}>{submitting ? "Salvando…" : submitLabel}</button>
   </form>;
 }

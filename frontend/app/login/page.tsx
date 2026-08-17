@@ -39,5 +39,5 @@ export default function LoginPage() {
   if (checking) return <div className="page container"><Notice title="Verificando sua sessão">Aguarde um instante.</Notice></div>;
   if (error) return <div className="page container"><Notice kind="error" title="Não foi possível verificar o cadastro">{error}</Notice><button className="button primary" onClick={() => window.location.reload()}>Tentar novamente</button></div>;
 
-  return <div className="page container"><SupabaseLogin eyebrow="Acesso da comunidade" title="Entrar na comunidade" description="Entre para publicar e cuidar dos seus anúncios." onSuccess={() => continueTo(nextPath)} /></div>;
+  return <div className="page container"><SupabaseLogin eyebrow="Acesso da comunidade" title="Entrar na comunidade" onSuccess={() => continueTo(nextPath)} /></div>;
 }

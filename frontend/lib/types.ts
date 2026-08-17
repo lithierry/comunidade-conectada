@@ -16,7 +16,7 @@ export interface AccountInfo {
 }
 export interface RegistrationPayload { full_name: string; email: string; password: string; cpf: string; phone: string; privacy_acknowledged: boolean; }
 export interface ProfileCompletionPayload { full_name: string; cpf: string; phone: string; privacy_acknowledged: boolean; }
-export interface RegistrationResult { requires_email_confirmation: boolean; message: string; }
+export interface RegistrationResult { message: string; }
 export const categories: { value: Category; label: string; symbol: string }[] = [
   { value: "donation", label: "Doações", symbol: "♧" }, { value: "event", label: "Eventos", symbol: "◌" },
   { value: "opportunity", label: "Oportunidades", symbol: "↗" }, { value: "service", label: "Serviços", symbol: "⌁" }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AccountIdentityFields } from "@/components/AccountIdentityFields";
+import { AppAlert, showFlashAlert } from "@/components/AppAlert";
 import { authErrorMessage } from "@/lib/auth";
 import { normalizeBrazilianPhone, normalizeCpf } from "@/lib/identity";
 import { api } from "@/services/api";
@@ -13,10 +14,9 @@ type LoginProps = {
   onSuccess: () => void | Promise<void>;
   title?: string;
   eyebrow?: string;
-  description?: string;
 };
 
-export function AdminLogin({ onSuccess, title = "Administração", eyebrow = "Área restrita", description = "Entre para gerenciar as publicações da comunidade." }: LoginProps) {
+export function AdminLogin({ onSuccess, title = "Administração", eyebrow = "Área restrita" }: LoginProps) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -38,19 +38,18 @@ export function AdminLogin({ onSuccess, title = "Administração", eyebrow = "Á
   return <form onSubmit={submit} className={styles.form}>
     <p className="eyebrow">{eyebrow}</p>
     <h1>{title}</h1>
-    <p>{description}</p>
     <div className="form-field">
       <label htmlFor="admin-password">Senha</label>
       <input id="admin-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required autoComplete="current-password" />
     </div>
-    {error && <p className="error-text" role="alert">{error}</p>}
+    {error && <AppAlert kind="error" title="Não foi possível entrar" message={error} onClose={() => setError("")} />}
     <button className="button primary" disabled={saving}>{saving ? "Entrando…" : "Entrar"}</button>
   </form>;
 }
 
 type AuthMode = "signin" | "signup" | "recover";
 
-export function SupabaseLogin({ onSuccess, title = "Entrar na comunidade", eyebrow = "Acesso da comunidade", description = "Entre para publicar e cuidar dos seus anúncios." }: LoginProps) {
+export function SupabaseLogin({ onSuccess, title = "Entrar na comunidade", eyebrow = "Acesso da comunidade" }: LoginProps) {
   const [mode, setMode] = useState<AuthMode>("signin");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -118,7 +117,7 @@ export function SupabaseLogin({ onSuccess, title = "Entrar na comunidade", eyebr
         if (result.error) throw result.error;
         await onSuccess();
       } else if (mode === "signup") {
-        const result = await api.registerAccount({
+        await api.registerAccount({
           full_name: normalizedName,
           email: normalizedEmail,
           password,
@@ -126,10 +125,13 @@ export function SupabaseLogin({ onSuccess, title = "Entrar na comunidade", eyebr
           phone: normalizedPhone!,
           privacy_acknowledged: privacyAccepted,
         });
+        const signedIn = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
+        if (signedIn.error) throw signedIn.error;
         setPassword("");
         setCpf("");
         setPhone("");
-        setMessage(result.message);
+        showFlashAlert({ kind: "success", title: "Conta criada", message: "Você já está conectado." });
+        await onSuccess();
       } else {
         const result = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
           redirectTo: `${window.location.origin}/redefinir-senha`,
@@ -150,27 +152,23 @@ export function SupabaseLogin({ onSuccess, title = "Entrar na comunidade", eyebr
   return <form onSubmit={submit} className={styles.form} noValidate>
     <p className="eyebrow">{eyebrow}</p>
     <h1>{signingUp ? "Criar conta" : recovering ? "Recuperar senha" : title}</h1>
-    <p>{signingUp ? "Crie uma conta vinculada aos seus dados para publicar na comunidade." : recovering ? "Informe seu e-mail para receber o link de recuperação." : description}</p>
     {signingUp && <div className="form-field">
       <label htmlFor="name">Nome completo</label>
-      <input id="name" type="text" value={name} onChange={(event) => setName(event.target.value)} required minLength={2} maxLength={100} autoComplete="name" aria-describedby="name-help" />
-      <small id="name-help">É assim que seu nome aparecerá na área da sua conta.</small>
+      <input id="name" type="text" value={name} onChange={(event) => setName(event.target.value)} required minLength={2} maxLength={100} autoComplete="name" />
     </div>}
     <div className="form-field">
       <label htmlFor="email">E-mail</label>
-      <input id="email" type="email" inputMode="email" value={email} onChange={(event) => setEmail(event.target.value)} required autoComplete="email" aria-describedby={signingUp || recovering ? "email-help" : undefined} />
-      {(signingUp || recovering) && <small id="email-help">{signingUp ? "Este e-mail será usado para confirmar sua conta e recuperar o acesso." : "Enviaremos o link de recuperação para este endereço."}</small>}
+      <input id="email" type="email" inputMode="email" value={email} onChange={(event) => setEmail(event.target.value)} required autoComplete="email" />
     </div>
     {signingUp && <AccountIdentityFields cpf={cpf} phone={phone} onCpfChange={setCpf} onPhoneChange={setPhone} idPrefix="signup" />}
     {!recovering && <div className="form-field">
       <label htmlFor="password">Senha</label>
-      <input id="password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={6} autoComplete={signingUp ? "new-password" : "current-password"} aria-describedby={signingUp ? "password-help" : undefined} />
-      {signingUp && <small id="password-help">Crie uma senha com pelo menos 6 caracteres.</small>}
+      <input id="password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={6} autoComplete={signingUp ? "new-password" : "current-password"} />
     </div>}
-    {signingUp && <label className="legal-check"><input type="checkbox" checked={privacyAccepted} onChange={(event) => setPrivacyAccepted(event.target.checked)} required /><span>Li e estou ciente do aviso de <Link href="/privacidade" target="_blank">privacidade e uso de dados</Link>, incluindo o uso de CPF e telefone para reduzir contas duplicadas.</span></label>}
+    {signingUp && <label className="legal-check"><input type="checkbox" checked={privacyAccepted} onChange={(event) => setPrivacyAccepted(event.target.checked)} required /><span>Li o aviso de <Link href="/privacidade" target="_blank">privacidade e uso de dados</Link>.</span></label>}
     {!signingUp && !recovering && <button type="button" className={styles.linkButton} onClick={() => changeMode("recover")}>Esqueci minha senha</button>}
-    {error && <p className="error-text" role="alert">{error}</p>}
-    {message && <p className={styles.status} role="status">{message}</p>}
+    {error && <AppAlert kind="error" title="Verifique os dados" message={error} onClose={() => setError("")} />}
+    {message && <AppAlert kind="success" title="Tudo certo" message={message} onClose={() => setMessage("")} />}
     <button className="button primary" disabled={saving}>{saving ? "Aguarde…" : signingUp ? "Criar conta" : recovering ? "Enviar link" : "Entrar"}</button>
     <div className={styles.alternatives}>
       {recovering ? <button type="button" className="button secondary" onClick={() => changeMode("signin")}>Voltar para entrar</button> : <button type="button" className="button secondary" onClick={() => changeMode(signingUp ? "signin" : "signup")}>{signingUp ? "Já tenho uma conta" : "Criar uma conta"}</button>}
@@ -233,10 +231,9 @@ export function PasswordUpdateForm() {
   return <form className={styles.form} onSubmit={submit}>
     <p className="eyebrow">Segurança</p>
     <h1>Criar nova senha</h1>
-    <p>Use pelo menos 6 caracteres.</p>
     <div className="form-field"><label htmlFor="new-password">Nova senha</label><input id="new-password" type="password" required minLength={6} autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} /></div>
     <div className="form-field"><label htmlFor="password-confirmation">Confirmar nova senha</label><input id="password-confirmation" type="password" required minLength={6} autoComplete="new-password" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></div>
-    {error && <p className="error-text" role="alert">{error}</p>}
+    {error && <AppAlert kind="error" title="Não foi possível salvar" message={error} onClose={() => setError("")} />}
     <button className="button primary" disabled={saving}>{saving ? "Salvando…" : "Salvar nova senha"}</button>
   </form>;
 }
