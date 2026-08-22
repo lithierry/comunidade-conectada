@@ -1,1 +1,49 @@
-.art{aspect-ratio:16/10;background:#f1f5f9;display:grid;place-items:center;overflow:hidden}.art img{width:100%;height:100%;object-fit:cover}.symbol{font:700 42px/1 Arial;color:#64748b}.donation{color:#a16207}.event{color:#7c3aed}.opportunity{color:#2563eb}.service{color:#0f766e}
+.art {
+    aspect-ratio: 16/10;
+    background: linear-gradient(
+        135deg,
+        #f8fafc 0%,
+        #eef2f7 100%
+    );
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+}
+
+.art img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 240ms ease;
+}
+
+.card:hover .art img {
+    transform: scale(1.025);
+}
+
+.symbol {
+    font: 700 42px/1 Arial, sans-serif;
+    color: #64748b
+}
+
+.donation {
+    color: #a16207
+}
+
+.event {
+    color: #7c3aed
+}
+
+.opportunity {
+    color: #2563eb
+}
+
+.service {
+    color: #0f766e
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .art img {
+        transition: none;
+    }
+}
