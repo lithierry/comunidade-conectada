@@ -1,1 +1,203 @@
-.back{display:inline-flex;min-height:44px;align-items:center;color:var(--primary);font-size:14px;font-weight:700;margin-bottom:18px}.layout{display:grid;gap:24px}.layout>:first-child{border:1px solid var(--border);border-radius:14px;overflow:hidden;align-self:start}.info{background:#fff;border:1px solid var(--border);border-radius:14px;padding:21px}.category{color:var(--primary);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}.info h1{font-size:clamp(27px,3.4vw,38px);line-height:1.1;letter-spacing:-1px;margin:9px 0}.meta{margin:0;color:var(--secondary);font-size:14px}.copy{white-space:pre-wrap;font-size:15px;line-height:1.65;margin:25px 0}.info dl{border-top:1px solid var(--border);padding-top:18px;margin:0 0 22px;display:grid;gap:14px}.info dl div{display:grid;gap:3px}.info dt{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:800}.info dd{margin:0;font-size:14px}.noContact{font-size:14px;color:var(--secondary)}@media(min-width:800px){.layout{grid-template-columns:minmax(0,1.1fr) minmax(330px,.9fr);align-items:start}.info{padding:28px}}
+.back {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    gap: 7px;
+    color: var(--primary);
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 18px;
+}
+
+.back:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.layout {
+    display: grid;
+    gap: 24px;
+    max-width: 1080px;
+    margin: 0 auto;
+}
+
+.media {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    align-self: start;
+    background: var(--surface);
+}
+
+.info {
+    min-width: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 21px;
+}
+
+.header {
+    padding-bottom: 22px;
+    border-bottom: 1px solid var(--border);
+}
+
+.headerMeta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 9px;
+}
+
+.category {
+    color: var(--primary);
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+.info h1 {
+    font-size: clamp(28px, 5vw, 40px);
+    line-height: 1.08;
+    letter-spacing: -1px;
+    margin: 10px 0 9px;
+    overflow-wrap: anywhere;
+}
+
+.meta {
+    margin: 0;
+    color: var(--secondary);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.contentSection {
+    padding: 24px 0;
+}
+
+.contentSection h2,
+.location h2,
+.contact h2 {
+    margin: 0 0 10px;
+    color: var(--text);
+    font-size: 17px;
+    line-height: 1.3;
+}
+
+.copy {
+    white-space: pre-wrap;
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+}
+
+.location {
+    padding: 18px 0 24px;
+    border-top: 1px solid var(--border);
+}
+
+.location p {
+    margin: 0 0 4px;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+.location span {
+    color: var(--secondary);
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.contact {
+    display: grid;
+    gap: 20px;
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    background: var(--background);
+}
+
+.contactEyebrown {
+    margin: 0 0 5px;
+    color: var(--primary);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+}
+
+.contact h2 {
+    margin-bottom: 17px;
+    font-size: 19px;
+}
+
+.contactDetail {
+    display: grid;
+    gap: 3px;
+    margin-top: 11px;
+}
+
+.contactDetail span {
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.contactDetail strong {
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+.contact :global(.button) {
+    width: 100%;
+}
+
+.noContact {
+    margin: 0;
+    color: var(--secondary);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.ownerActions {
+    margin-top: 18px;
+}
+
+.ownerActions :global(.button) {
+    width: 100%;
+}
+
+@media(min-width:800px) {
+    .layout {
+        grid-template-columns: minmax(0, 1.1fr) minmax(330px, 0.9fr);
+        align-items: start;
+    }
+
+    .media {
+        position: relative;
+        top: 24px;
+    }
+
+    .info {
+        padding: 28px;
+    }
+
+    .contact {
+        padding: 22px;
+    }
+
+    .contact :global(.button) {
+        width: fit-content;
+    }
+
+    .ownerActions :global(.button) {
+        width: fit-content;
+    }
+}
